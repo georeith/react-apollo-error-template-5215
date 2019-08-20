@@ -1,6 +1,15 @@
-import React from "react";
-import { useQuery } from "@apollo/react-hooks";
+import React, { useState } from "react";
+import { useMutation, useQuery } from "@apollo/react-hooks";
 import gql from "graphql-tag";
+
+const ADD_PERSON = gql`
+  mutation AddPerson($name: String!) {
+    addPerson(name: $name) {
+      id
+      name
+    }
+  }
+`;
 
 const ALL_PEOPLE = gql`
   query AllPeople {
@@ -12,10 +21,21 @@ const ALL_PEOPLE = gql`
 `;
 
 export default function App() {
-  const {
-    loading,
-    data: { people }
-  } = useQuery(ALL_PEOPLE);
+  const [personToAddName, setPersonToAddName] = useState("");
+  const { loading, data } = useQuery(ALL_PEOPLE);
+  const { people } = data;
+  const [addPerson] = useMutation(ADD_PERSON, {
+    update(cache, { data }) {
+      const cachedData = cache.readQuery({ query: ALL_PEOPLE });
+      console.log(data);
+      cache.writeQuery({
+        query: ALL_PEOPLE,
+        data: {
+          people: [...cachedData.people, data.addPerson]
+        }
+      });
+    }
+  });
 
   return (
     <main>
@@ -27,11 +47,37 @@ export default function App() {
       {loading ? (
         <p>Loading…</p>
       ) : (
-        <ul>
-          {people.map(person => (
-            <li key={person.id}>{person.name}</li>
-          ))}
-        </ul>
+        <>
+          <ul>
+            {people.map(person => (
+              <li key={person.id}>{person.name}</li>
+            ))}
+          </ul>
+          <input
+            onChange={e => {
+              setPersonToAddName(e.target.value);
+            }}
+            type="text"
+            value={personToAddName}
+          />
+          <button
+            onClick={() => {
+              if (personToAddName)
+                addPerson({
+                  variables: { name: personToAddName },
+                  optimisticResponse: {
+                    addPerson: {
+                      id: people.length + 1,
+                      name: personToAddName,
+                      __typename: "Person"
+                    }
+                  }
+                });
+            }}
+          >
+            Add person
+          </button>
+        </>
       )}
     </main>
   );
