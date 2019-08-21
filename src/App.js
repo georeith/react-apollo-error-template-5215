@@ -49,6 +49,10 @@ export default function App() {
         </li>
       </ul>
       <h2>Names</h2>
+      <p>
+        <b>Note:</b> If you send the value <b>Jeff</b> the server will respond
+        with a GraphQl error.
+      </p>
       {loading1 ? (
         <p>Loading…</p>
       ) : (
